@@ -133,11 +133,25 @@ python deni.py deepseek-fix "C:/Music" --dry --output fixed_dump.json
 python deni.py deepseek-fix "C:/Music" --output fixed_dump.json
 ```
 
+For large libraries, Deni automatically splits tracks into batches. Defaults:
+100 tracks per DeepSeek request and 3 parallel requests.
+
+```bash
+python deni.py deepseek-fix "C:/Music" --batch-size 100 --workers 3 --dry
+```
+
 Исправить названия через DeepSeek и применить:
 
 ```bash
 python deni.py deepseek-fix "C:/Music" --dry --output fixed_dump.json
 python deni.py deepseek-fix "C:/Music" --output fixed_dump.json
+```
+
+Для больших коллекций Deni автоматически делит треки на батчи. По умолчанию:
+100 треков на один запрос DeepSeek и 3 параллельных запроса.
+
+```bash
+python deni.py deepseek-fix "C:/Music" --batch-size 100 --workers 3 --dry
 ```
 
 ## JSON dump format / Формат JSON

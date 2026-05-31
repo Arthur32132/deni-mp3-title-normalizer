@@ -1,5 +1,6 @@
 import argparse
 import collections
+import concurrent.futures
 import json
 import os
 import sys
@@ -180,8 +181,7 @@ def cmd_deepseek_fix(args):
         print("MP3-файлы не найдены")
         return
 
-    fixed_dump = deepseek_fix_dump(dump_data, args)
-    validate_fixed_dump(dump_data, fixed_dump)
+    fixed_dump = deepseek_fix_dump_batched(dump_data, args, print)
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
@@ -189,6 +189,52 @@ def cmd_deepseek_fix(args):
         print(f"Исправленный дамп сохранён: {args.output}")
 
     apply_compact_title_dump(args, fixed_dump)
+
+
+def deepseek_fix_dump_batched(dump_data: dict, args, progress=None) -> dict:
+    files = dump_data.get("files", [])
+    batch_size = max(1, int(getattr(args, "batch_size", 100) or 100))
+    workers = max(1, int(getattr(args, "workers", 3) or 3))
+    batches = []
+
+    for start in range(0, len(files), batch_size):
+        batches.append({
+            "format": dump_data.get("format"),
+            "root": dump_data.get("root"),
+            "files": files[start:start + batch_size],
+        })
+
+    if progress:
+        progress(f"DeepSeek batches: {len(batches)} x up to {batch_size} tracks, workers: {workers}")
+
+    fixed_batches = [None] * len(batches)
+
+    def run_batch(index: int, batch: dict):
+        if progress:
+            progress(f"Batch {index + 1}/{len(batches)} started ({len(batch['files'])} tracks)")
+        fixed = deepseek_fix_dump(batch, args)
+        validate_fixed_dump(batch, fixed)
+        if progress:
+            progress(f"Batch {index + 1}/{len(batches)} done")
+        return index, fixed
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(workers, len(batches))) as executor:
+        futures = [executor.submit(run_batch, index, batch) for index, batch in enumerate(batches)]
+        for future in concurrent.futures.as_completed(futures):
+            index, fixed = future.result()
+            fixed_batches[index] = fixed
+
+    fixed_files = []
+    for fixed in fixed_batches:
+        fixed_files.extend(fixed["files"])
+
+    fixed_dump = {
+        "format": dump_data.get("format"),
+        "root": dump_data.get("root"),
+        "files": fixed_files,
+    }
+    validate_fixed_dump(dump_data, fixed_dump)
+    return fixed_dump
 
 
 def deepseek_fix_dump(dump_data: dict, args) -> dict:
@@ -489,6 +535,8 @@ def main():
     p_deepseek.add_argument("--max-tokens", type=int, default=30000, help="Лимит токенов ответа")
     p_deepseek.add_argument("--temperature", type=float, default=0.1, help="Температура модели")
     p_deepseek.add_argument("--timeout", type=int, default=120, help="Таймаут запроса в секундах")
+    p_deepseek.add_argument("--batch-size", type=int, default=100, help="Треков в одном запросе DeepSeek")
+    p_deepseek.add_argument("--workers", type=int, default=3, help="Параллельных запросов DeepSeek")
     p_deepseek.set_defaults(func=cmd_deepseek_fix)
 
     p_dump_words = sub.add_parser("dump-words", help="Выгрузить слова из MP3 для разметки")

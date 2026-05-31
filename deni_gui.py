@@ -12,8 +12,8 @@ from types import SimpleNamespace
 
 from deni import apply_compact_title_dump
 from deni import build_compact_title_dump
-from deni import deepseek_fix_dump
-from deni import validate_fixed_dump
+from deni import collect_mp3_paths
+from deni import deepseek_fix_dump_batched
 
 
 class DeniApp(tk.Tk):
@@ -30,6 +30,8 @@ class DeniApp(tk.Tk):
         self.dry_var = tk.BooleanVar(value=True)
         self.output_var = tk.BooleanVar(value=True)
         self.model_var = tk.StringVar(value="deepseek-v4-flash")
+        self.batch_size_var = tk.StringVar(value="100")
+        self.workers_var = tk.StringVar(value="3")
 
         self.build_ui()
         self.after(100, self.drain_events)
@@ -48,6 +50,10 @@ class DeniApp(tk.Tk):
         options.pack(fill=tk.X, pady=10)
         ttk.Label(options, text="Лимит").pack(side=tk.LEFT)
         ttk.Entry(options, textvariable=self.limit_var, width=8).pack(side=tk.LEFT, padx=(6, 16))
+        ttk.Label(options, text="Батч").pack(side=tk.LEFT)
+        ttk.Entry(options, textvariable=self.batch_size_var, width=6).pack(side=tk.LEFT, padx=(6, 16))
+        ttk.Label(options, text="Потоки").pack(side=tk.LEFT)
+        ttk.Entry(options, textvariable=self.workers_var, width=6).pack(side=tk.LEFT, padx=(6, 16))
         ttk.Checkbutton(options, text="Только проверить (--dry)", variable=self.dry_var).pack(side=tk.LEFT, padx=(0, 16))
         ttk.Checkbutton(options, text="Сохранить fixed_dump.json", variable=self.output_var).pack(side=tk.LEFT)
 
@@ -60,6 +66,8 @@ class DeniApp(tk.Tk):
         buttons.pack(fill=tk.X, pady=10)
         self.run_button = ttk.Button(buttons, text="Запустить DeepSeek", command=self.start)
         self.run_button.pack(side=tk.LEFT)
+        self.count_button = ttk.Button(buttons, text="Посчитать треки", command=self.start_count)
+        self.count_button.pack(side=tk.LEFT, padx=(8, 0))
         ttk.Button(buttons, text="Очистить лог", command=self.clear_log).pack(side=tk.LEFT, padx=8)
 
         self.log = tk.Text(root, wrap=tk.WORD, height=20)
@@ -87,13 +95,52 @@ class DeniApp(tk.Tk):
             except ValueError:
                 messagebox.showerror("Deni", "Лимит должен быть числом.")
                 return
+        batch_size = self.parse_positive_int(self.batch_size_var.get(), "Батч")
+        if batch_size is None:
+            return
+        workers = self.parse_positive_int(self.workers_var.get(), "Потоки")
+        if workers is None:
+            return
 
         self.run_button.configure(state=tk.DISABLED)
+        self.count_button.configure(state=tk.DISABLED)
         self.write_log("\n=== Запуск ===\n")
-        self.worker = threading.Thread(target=self.run_job, args=(folder, limit), daemon=True)
+        self.worker = threading.Thread(target=self.run_job, args=(folder, limit, batch_size, workers), daemon=True)
         self.worker.start()
 
-    def run_job(self, folder, limit):
+    def parse_positive_int(self, value, label):
+        try:
+            result = int(value.strip())
+        except ValueError:
+            messagebox.showerror("Deni", f"{label} должен быть числом.")
+            return None
+        if result < 1:
+            messagebox.showerror("Deni", f"{label} должен быть больше нуля.")
+            return None
+        return result
+
+    def start_count(self):
+        folder = self.folder_var.get().strip()
+        if not folder:
+            messagebox.showerror("Deni", "Выбери папку с MP3.")
+            return
+        if not os.path.isdir(folder):
+            messagebox.showerror("Deni", "Такой папки нет.")
+            return
+        self.run_button.configure(state=tk.DISABLED)
+        self.count_button.configure(state=tk.DISABLED)
+        self.write_log("\n=== Подсчёт треков ===\n")
+        threading.Thread(target=self.count_job, args=(folder,), daemon=True).start()
+
+    def count_job(self, folder):
+        try:
+            count = len(collect_mp3_paths([folder]))
+            self.events.put(("log", f"Найдено MP3: {count}\n"))
+            self.events.put(("done", None))
+        except BaseException as e:
+            self.events.put(("error", str(e)))
+
+    def run_job(self, folder, limit, batch_size, workers):
         try:
             args = SimpleNamespace(
                 api_key=None,
@@ -103,6 +150,8 @@ class DeniApp(tk.Tk):
                 timeout=120,
                 root=None,
                 dry=self.dry_var.get(),
+                batch_size=batch_size,
+                workers=workers,
             )
             dump_data = build_compact_title_dump(folder, limit)
             self.events.put(("log", f"Найдено MP3: {len(dump_data['files'])}\n"))
@@ -110,8 +159,7 @@ class DeniApp(tk.Tk):
                 self.events.put(("done", None))
                 return
 
-            fixed_dump = deepseek_fix_dump(dump_data, args)
-            validate_fixed_dump(dump_data, fixed_dump)
+            fixed_dump = deepseek_fix_dump_batched(dump_data, args, self.queue_log)
 
             if self.output_var.get():
                 output = os.path.join(os.getcwd(), "fixed_dump.json")
@@ -124,8 +172,11 @@ class DeniApp(tk.Tk):
                 apply_compact_title_dump(args, fixed_dump)
             self.events.put(("log", buffer.getvalue()))
             self.events.put(("done", None))
-        except Exception as e:
+        except BaseException as e:
             self.events.put(("error", str(e)))
+
+    def queue_log(self, text):
+        self.events.put(("log", f"{text}\n"))
 
     def drain_events(self):
         try:
@@ -137,9 +188,11 @@ class DeniApp(tk.Tk):
                     self.write_log(f"\nОшибка: {payload}\n")
                     messagebox.showerror("Deni", payload)
                     self.run_button.configure(state=tk.NORMAL)
+                    self.count_button.configure(state=tk.NORMAL)
                 elif kind == "done":
                     self.write_log("=== Готово ===\n")
                     self.run_button.configure(state=tk.NORMAL)
+                    self.count_button.configure(state=tk.NORMAL)
         except queue.Empty:
             pass
         self.after(100, self.drain_events)
