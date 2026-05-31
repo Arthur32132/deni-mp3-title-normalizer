@@ -1,0 +1,10 @@
+deepseek_api_key.txt
+__pycache__/
+*.py[cod]
+dump*.json
+*_dump.json
+fixed_dump*.json
+current_dump.json
+proposed_dump.json
+nirvana_fixed_dump.json
+.env
