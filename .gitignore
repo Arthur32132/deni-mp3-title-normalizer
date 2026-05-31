@@ -8,3 +8,6 @@ current_dump.json
 proposed_dump.json
 nirvana_fixed_dump.json
 .env
+build/
+dist/
+*.spec

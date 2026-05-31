@@ -32,6 +32,40 @@ and apply the corrected tags back to the files.
 pip install -r requirements.txt
 ```
 
+## One-click Windows app / Windows-приложение в один клик
+
+You can run the graphical app without typing commands:
+
+```bash
+python deni_gui.py
+```
+
+Or build a standalone executable:
+
+```bat
+build_exe.bat
+```
+
+The generated app will be available at `dist/Deni.exe`.
+Put `deepseek_api_key.txt` next to `Deni.exe` if you want the exe to call
+DeepSeek without environment variables.
+
+Можно запустить графическое окно без командной работы:
+
+```bash
+python deni_gui.py
+```
+
+Или собрать самостоятельный `.exe`:
+
+```bat
+build_exe.bat
+```
+
+Готовая программа появится в `dist/Deni.exe`.
+Положи `deepseek_api_key.txt` рядом с `Deni.exe`, чтобы exe мог обращаться к
+DeepSeek без переменных окружения.
+
 ## DeepSeek key / Ключ DeepSeek
 
 Use one of these options:

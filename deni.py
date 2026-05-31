@@ -13,10 +13,12 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
-PROPER_NOUNS_PATH = os.path.join(os.path.dirname(__file__), "proper_nouns.json")
-NAMES_DICTIONARY_PATH = os.path.join(os.path.dirname(__file__), "names_dictionary.json")
-PLACES_DICTIONARY_PATH = os.path.join(os.path.dirname(__file__), "places_dictionary.json")
-DEEPSEEK_KEY_PATH = os.path.join(os.path.dirname(__file__), "deepseek_api_key.txt")
+RESOURCE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(__file__))
+USER_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(__file__)
+PROPER_NOUNS_PATH = os.path.join(RESOURCE_DIR, "proper_nouns.json")
+NAMES_DICTIONARY_PATH = os.path.join(RESOURCE_DIR, "names_dictionary.json")
+PLACES_DICTIONARY_PATH = os.path.join(RESOURCE_DIR, "places_dictionary.json")
+DEEPSEEK_KEY_PATH = os.path.join(USER_DIR, "deepseek_api_key.txt")
 TAG_DUMP_FORMAT = "deni-tag-dump-v1"
 TITLE_DUMP_FORMAT = "deni-title-dump-v1"
 COMPACT_TITLE_DUMP_FORMAT = "deni-title-compact-v1"
