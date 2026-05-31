@@ -9,8 +9,10 @@ import urllib.request
 from normalizer import load_proper_nouns, normalize_case, save_proper_nouns
 from mp3_handler import get_tags, set_tags, TAGS_TO_PROCESS
 
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+if sys.stdout is not None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if sys.stderr is not None:
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
 RESOURCE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(__file__))
