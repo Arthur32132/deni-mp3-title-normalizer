@@ -11,6 +11,7 @@ from tkinter import ttk
 from types import SimpleNamespace
 
 from deni import apply_compact_title_dump
+from deni import APP_ICON_PNG_PATH
 from deni import build_compact_title_dump
 from deni import collect_mp3_paths
 from deni import deepseek_fix_dump_batched
@@ -22,6 +23,7 @@ class DeniApp(tk.Tk):
         self.title("Deni MP3 Title Cleaner")
         self.geometry("820x560")
         self.minsize(720, 480)
+        self.set_app_icon()
         self.events = queue.Queue()
         self.worker = None
 
@@ -35,6 +37,13 @@ class DeniApp(tk.Tk):
 
         self.build_ui()
         self.after(100, self.drain_events)
+
+    def set_app_icon(self):
+        try:
+            self.icon_image = tk.PhotoImage(file=APP_ICON_PNG_PATH)
+            self.iconphoto(True, self.icon_image)
+        except tk.TclError:
+            self.icon_image = None
 
     def build_ui(self):
         root = ttk.Frame(self, padding=12)

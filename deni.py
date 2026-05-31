@@ -22,6 +22,7 @@ PROPER_NOUNS_PATH = os.path.join(RESOURCE_DIR, "proper_nouns.json")
 NAMES_DICTIONARY_PATH = os.path.join(RESOURCE_DIR, "names_dictionary.json")
 PLACES_DICTIONARY_PATH = os.path.join(RESOURCE_DIR, "places_dictionary.json")
 DEEPSEEK_KEY_PATH = os.path.join(USER_DIR, "deepseek_api_key.txt")
+APP_ICON_PNG_PATH = os.path.join(RESOURCE_DIR, "rap.png")
 TAG_DUMP_FORMAT = "deni-tag-dump-v1"
 TITLE_DUMP_FORMAT = "deni-title-dump-v1"
 COMPACT_TITLE_DUMP_FORMAT = "deni-title-compact-v1"
