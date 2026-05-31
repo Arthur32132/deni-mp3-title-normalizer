@@ -51,6 +51,10 @@ Put `deepseek_api_key.txt` next to `Deni.exe` if you want the exe to call
 DeepSeek without environment variables.
 The GUI can process several folders at once: add each folder to the list, then
 run counting or DeepSeek cleanup for the whole set.
+It also has rotating image backgrounds from `images/`; the rotation is enabled
+by default and can be stopped from the UI, which falls back to `rap.png`.
+When folders are selected, the app plays random MP3 files from them in the
+background and switches tracks automatically.
 
 Можно запустить графическое окно без командной работы:
 
@@ -69,6 +73,10 @@ build_exe.bat
 DeepSeek без переменных окружения.
 GUI умеет обрабатывать несколько папок сразу: добавь каждую папку в список, а
 потом запускай подсчёт или исправление DeepSeek для всего набора.
+Также в GUI есть ротация фоновых картинок из `images/`; она включена по
+умолчанию и отключается кнопкой, после чего фоном становится `rap.png`.
+Когда папки выбраны, программа играет случайные MP3 из них на фоне и сама
+переключает трек после окончания.
 
 ## DeepSeek key / Ключ DeepSeek
 
