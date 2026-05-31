@@ -49,6 +49,8 @@ build_exe.bat
 The generated app will be available at `dist/Deni.exe`.
 Put `deepseek_api_key.txt` next to `Deni.exe` if you want the exe to call
 DeepSeek without environment variables.
+The GUI can process several folders at once: add each folder to the list, then
+run counting or DeepSeek cleanup for the whole set.
 
 Можно запустить графическое окно без командной работы:
 
@@ -65,6 +67,8 @@ build_exe.bat
 Готовая программа появится в `dist/Deni.exe`.
 Положи `deepseek_api_key.txt` рядом с `Deni.exe`, чтобы exe мог обращаться к
 DeepSeek без переменных окружения.
+GUI умеет обрабатывать несколько папок сразу: добавь каждую папку в список, а
+потом запускай подсчёт или исправление DeepSeek для всего набора.
 
 ## DeepSeek key / Ключ DeepSeek
 

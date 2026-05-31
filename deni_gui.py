@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 from deni import apply_compact_title_dump
 from deni import APP_ICON_PNG_PATH
-from deni import build_compact_title_dump
+from deni import build_compact_title_dump_for_paths
 from deni import collect_mp3_paths
 from deni import deepseek_fix_dump_batched
 
@@ -21,13 +21,12 @@ class DeniApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Deni MP3 Title Cleaner")
-        self.geometry("820x560")
-        self.minsize(720, 480)
+        self.geometry("900x620")
+        self.minsize(780, 540)
         self.set_app_icon()
         self.events = queue.Queue()
         self.worker = None
 
-        self.folder_var = tk.StringVar()
         self.limit_var = tk.StringVar()
         self.dry_var = tk.BooleanVar(value=True)
         self.output_var = tk.BooleanVar(value=True)
@@ -49,11 +48,21 @@ class DeniApp(tk.Tk):
         root = ttk.Frame(self, padding=12)
         root.pack(fill=tk.BOTH, expand=True)
 
-        folder_row = ttk.Frame(root)
-        folder_row.pack(fill=tk.X)
-        ttk.Label(folder_row, text="Папка с MP3").pack(side=tk.LEFT)
-        ttk.Entry(folder_row, textvariable=self.folder_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
-        ttk.Button(folder_row, text="Выбрать", command=self.choose_folder).pack(side=tk.LEFT)
+        folder_frame = ttk.LabelFrame(root, text="Папки с MP3", padding=8)
+        folder_frame.pack(fill=tk.X)
+        list_frame = ttk.Frame(folder_frame)
+        list_frame.pack(fill=tk.X)
+        self.folder_list = tk.Listbox(list_frame, height=4, selectmode=tk.EXTENDED)
+        self.folder_list.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        folder_scroll = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.folder_list.yview)
+        folder_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.folder_list.configure(yscrollcommand=folder_scroll.set)
+
+        folder_buttons = ttk.Frame(folder_frame)
+        folder_buttons.pack(fill=tk.X, pady=(8, 0))
+        ttk.Button(folder_buttons, text="Добавить папку", command=self.add_folder).pack(side=tk.LEFT)
+        ttk.Button(folder_buttons, text="Убрать выбранную", command=self.remove_selected_folders).pack(side=tk.LEFT, padx=8)
+        ttk.Button(folder_buttons, text="Очистить список", command=self.clear_folders).pack(side=tk.LEFT)
 
         options = ttk.Frame(root)
         options.pack(fill=tk.X, pady=10)
@@ -81,20 +90,33 @@ class DeniApp(tk.Tk):
 
         self.log = tk.Text(root, wrap=tk.WORD, height=20)
         self.log.pack(fill=tk.BOTH, expand=True)
-        self.log.insert(tk.END, "Положи deepseek_api_key.txt рядом с exe или deni.py, выбери папку и нажми запуск.\n")
+        self.log.insert(tk.END, "Положи deepseek_api_key.txt рядом с exe или deni.py, добавь папки и нажми запуск.\n")
 
-    def choose_folder(self):
+    def add_folder(self):
         folder = filedialog.askdirectory()
         if folder:
-            self.folder_var.set(folder)
+            existing = set(self.folder_list.get(0, tk.END))
+            if folder not in existing:
+                self.folder_list.insert(tk.END, folder)
+
+    def remove_selected_folders(self):
+        for index in reversed(self.folder_list.curselection()):
+            self.folder_list.delete(index)
+
+    def clear_folders(self):
+        self.folder_list.delete(0, tk.END)
+
+    def selected_folders(self):
+        return list(self.folder_list.get(0, tk.END))
 
     def start(self):
-        folder = self.folder_var.get().strip()
-        if not folder:
-            messagebox.showerror("Deni", "Выбери папку с MP3.")
+        folders = self.selected_folders()
+        if not folders:
+            messagebox.showerror("Deni", "Добавь хотя бы одну папку с MP3.")
             return
-        if not os.path.isdir(folder):
-            messagebox.showerror("Deni", "Такой папки нет.")
+        missing = [folder for folder in folders if not os.path.isdir(folder)]
+        if missing:
+            messagebox.showerror("Deni", f"Такой папки нет: {missing[0]}")
             return
 
         limit = None
@@ -114,7 +136,7 @@ class DeniApp(tk.Tk):
         self.run_button.configure(state=tk.DISABLED)
         self.count_button.configure(state=tk.DISABLED)
         self.write_log("\n=== Запуск ===\n")
-        self.worker = threading.Thread(target=self.run_job, args=(folder, limit, batch_size, workers), daemon=True)
+        self.worker = threading.Thread(target=self.run_job, args=(folders, limit, batch_size, workers), daemon=True)
         self.worker.start()
 
     def parse_positive_int(self, value, label):
@@ -129,27 +151,28 @@ class DeniApp(tk.Tk):
         return result
 
     def start_count(self):
-        folder = self.folder_var.get().strip()
-        if not folder:
-            messagebox.showerror("Deni", "Выбери папку с MP3.")
+        folders = self.selected_folders()
+        if not folders:
+            messagebox.showerror("Deni", "Добавь хотя бы одну папку с MP3.")
             return
-        if not os.path.isdir(folder):
-            messagebox.showerror("Deni", "Такой папки нет.")
+        missing = [folder for folder in folders if not os.path.isdir(folder)]
+        if missing:
+            messagebox.showerror("Deni", f"Такой папки нет: {missing[0]}")
             return
         self.run_button.configure(state=tk.DISABLED)
         self.count_button.configure(state=tk.DISABLED)
         self.write_log("\n=== Подсчёт треков ===\n")
-        threading.Thread(target=self.count_job, args=(folder,), daemon=True).start()
+        threading.Thread(target=self.count_job, args=(folders,), daemon=True).start()
 
-    def count_job(self, folder):
+    def count_job(self, folders):
         try:
-            count = len(collect_mp3_paths([folder]))
+            count = len(collect_mp3_paths(folders))
             self.events.put(("log", f"Найдено MP3: {count}\n"))
             self.events.put(("done", None))
         except BaseException as e:
             self.events.put(("error", str(e)))
 
-    def run_job(self, folder, limit, batch_size, workers):
+    def run_job(self, folders, limit, batch_size, workers):
         try:
             args = SimpleNamespace(
                 api_key=None,
@@ -162,7 +185,7 @@ class DeniApp(tk.Tk):
                 batch_size=batch_size,
                 workers=workers,
             )
-            dump_data = build_compact_title_dump(folder, limit)
+            dump_data = build_compact_title_dump_for_paths(folders, limit)
             self.events.put(("log", f"Найдено MP3: {len(dump_data['files'])}\n"))
             if not dump_data["files"]:
                 self.events.put(("done", None))

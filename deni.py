@@ -75,9 +75,14 @@ def collect_words_from_path(root: str, limit: int | None = None) -> collections.
 
 
 def build_compact_title_dump(path: str, limit: int | None = None) -> dict:
+    return build_compact_title_dump_for_paths([path], limit)
+
+
+def build_compact_title_dump_for_paths(paths: list[str], limit: int | None = None) -> dict:
     dictionaries = load_title_dictionaries()
-    root = os.path.abspath(path)
-    paths = collect_mp3_paths([root])
+    roots = [os.path.abspath(path) for path in paths]
+    common_root = os.path.commonpath(roots) if roots else os.getcwd()
+    paths = collect_mp3_paths(roots)
     if limit:
         paths = paths[:limit]
 
@@ -86,13 +91,13 @@ def build_compact_title_dump(path: str, limit: int | None = None) -> dict:
         tags = get_tags(filepath)
         title = tags.get("title") or ""
         files.append([
-            to_dump_path(filepath, root),
+            to_dump_path(filepath, common_root),
             normalize_case(title, dictionaries),
         ])
 
     return {
         "format": COMPACT_TITLE_DUMP_FORMAT,
-        "root": to_json_path(root),
+        "root": to_json_path(common_root),
         "files": files,
     }
 
