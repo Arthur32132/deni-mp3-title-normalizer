@@ -67,46 +67,62 @@ class DeniApp(tk.Tk):
             self.icon_image = None
 
     def build_ui(self):
-        self.canvas = tk.Canvas(self, highlightthickness=0)
+        self.style = ttk.Style(self)
+        self.style.configure("Overlay.TFrame", background="#111111")
+        self.style.configure("Overlay.TLabelframe", background="#111111")
+        self.style.configure("Overlay.TLabelframe.Label", background="#111111", foreground="#f2f2f2")
+        self.style.configure("Overlay.TLabel", background="#111111", foreground="#f2f2f2")
+        self.style.configure("Overlay.TCheckbutton", background="#111111", foreground="#f2f2f2")
+
+        self.canvas = tk.Canvas(self, highlightthickness=0, bg="#111111")
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind("<Configure>", self.on_canvas_resize)
 
-        root = ttk.Frame(self.canvas, padding=12)
-        self.content_window = self.canvas.create_window(0, 0, anchor=tk.NW, window=root)
+        root = ttk.Frame(self.canvas, padding=12, style="Overlay.TFrame")
+        self.content_window = self.canvas.create_window(24, 24, anchor=tk.NW, window=root)
 
-        folder_frame = ttk.LabelFrame(root, text="Папки с MP3", padding=8)
+        folder_frame = ttk.LabelFrame(root, text="Папки с MP3", padding=8, style="Overlay.TLabelframe")
         folder_frame.pack(fill=tk.X)
-        list_frame = ttk.Frame(folder_frame)
+        list_frame = ttk.Frame(folder_frame, style="Overlay.TFrame")
         list_frame.pack(fill=tk.X)
-        self.folder_list = tk.Listbox(list_frame, height=4, selectmode=tk.EXTENDED)
+        self.folder_list = tk.Listbox(
+            list_frame,
+            height=4,
+            selectmode=tk.EXTENDED,
+            bg="#181818",
+            fg="#f2f2f2",
+            selectbackground="#3b6ea8",
+            selectforeground="#ffffff",
+            relief=tk.FLAT,
+        )
         self.folder_list.pack(side=tk.LEFT, fill=tk.X, expand=True)
         folder_scroll = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.folder_list.yview)
         folder_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.folder_list.configure(yscrollcommand=folder_scroll.set)
 
-        folder_buttons = ttk.Frame(folder_frame)
+        folder_buttons = ttk.Frame(folder_frame, style="Overlay.TFrame")
         folder_buttons.pack(fill=tk.X, pady=(8, 0))
         ttk.Button(folder_buttons, text="Добавить папку", command=self.add_folder).pack(side=tk.LEFT)
         ttk.Button(folder_buttons, text="Убрать выбранную", command=self.remove_selected_folders).pack(side=tk.LEFT, padx=8)
         ttk.Button(folder_buttons, text="Очистить список", command=self.clear_folders).pack(side=tk.LEFT)
 
-        options = ttk.Frame(root)
+        options = ttk.Frame(root, style="Overlay.TFrame")
         options.pack(fill=tk.X, pady=10)
-        ttk.Label(options, text="Лимит").pack(side=tk.LEFT)
+        ttk.Label(options, text="Лимит", style="Overlay.TLabel").pack(side=tk.LEFT)
         ttk.Entry(options, textvariable=self.limit_var, width=8).pack(side=tk.LEFT, padx=(6, 16))
-        ttk.Label(options, text="Батч").pack(side=tk.LEFT)
+        ttk.Label(options, text="Батч", style="Overlay.TLabel").pack(side=tk.LEFT)
         ttk.Entry(options, textvariable=self.batch_size_var, width=6).pack(side=tk.LEFT, padx=(6, 16))
-        ttk.Label(options, text="Потоки").pack(side=tk.LEFT)
+        ttk.Label(options, text="Потоки", style="Overlay.TLabel").pack(side=tk.LEFT)
         ttk.Entry(options, textvariable=self.workers_var, width=6).pack(side=tk.LEFT, padx=(6, 16))
-        ttk.Checkbutton(options, text="Только проверить (--dry)", variable=self.dry_var).pack(side=tk.LEFT, padx=(0, 16))
-        ttk.Checkbutton(options, text="Сохранить fixed_dump.json", variable=self.output_var).pack(side=tk.LEFT)
+        ttk.Checkbutton(options, text="Только проверить (--dry)", variable=self.dry_var, style="Overlay.TCheckbutton").pack(side=tk.LEFT, padx=(0, 16))
+        ttk.Checkbutton(options, text="Сохранить fixed_dump.json", variable=self.output_var, style="Overlay.TCheckbutton").pack(side=tk.LEFT)
 
-        model_row = ttk.Frame(root)
+        model_row = ttk.Frame(root, style="Overlay.TFrame")
         model_row.pack(fill=tk.X)
-        ttk.Label(model_row, text="Модель").pack(side=tk.LEFT)
+        ttk.Label(model_row, text="Модель", style="Overlay.TLabel").pack(side=tk.LEFT)
         ttk.Entry(model_row, textvariable=self.model_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
 
-        buttons = ttk.Frame(root)
+        buttons = ttk.Frame(root, style="Overlay.TFrame")
         buttons.pack(fill=tk.X, pady=10)
         self.run_button = ttk.Button(buttons, text="Запустить DeepSeek", command=self.start)
         self.run_button.pack(side=tk.LEFT)
@@ -116,8 +132,8 @@ class DeniApp(tk.Tk):
         self.background_button.pack(side=tk.LEFT, padx=(8, 0))
         ttk.Button(buttons, text="Очистить лог", command=self.clear_log).pack(side=tk.LEFT, padx=8)
 
-        self.log = tk.Text(root, wrap=tk.WORD, height=20)
-        self.log.pack(fill=tk.BOTH, expand=True)
+        self.log = tk.Text(root, wrap=tk.WORD, height=14, bg="#111111", fg="#eeeeee", insertbackground="#eeeeee", relief=tk.FLAT)
+        self.log.pack(fill=tk.BOTH, expand=False)
         self.log.insert(tk.END, "Положи deepseek_api_key.txt рядом с exe или deni.py, добавь папки и нажми запуск.\n")
 
     def add_folder(self):
@@ -280,8 +296,9 @@ class DeniApp(tk.Tk):
         return paths
 
     def on_canvas_resize(self, event):
-        self.canvas.coords(self.content_window, 0, 0)
-        self.canvas.itemconfigure(self.content_window, width=event.width, height=event.height)
+        margin = 24
+        self.canvas.coords(self.content_window, margin, margin)
+        self.canvas.itemconfigure(self.content_window, width=max(1, event.width - margin * 2))
         self.render_background(self.background_image or self.load_background(APP_ICON_PNG_PATH))
 
     def load_background(self, path):
